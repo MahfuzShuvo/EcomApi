@@ -14,6 +14,7 @@ namespace EcomApi.Model
         public int CategoryId { get; set; }
         public string Name { get; set; }
         public int ParentId { get; set; }
+        public bool HasChild { get; set; } = false;
         public bool Status { get; set; }
 
     }

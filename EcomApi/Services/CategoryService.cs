@@ -15,7 +15,7 @@ namespace EcomApi.Services
     public class CategoryService : ICategoryService
     {
         private readonly IServiceScopeFactory _serviceScopeFactory;
-        private readonly AppDataContext _dbContext;
+        private AppDataContext _dbContext;
 
         public CategoryService(IServiceScopeFactory serviceScopeFactory, AppDataContext appDataContext)
         {
@@ -82,6 +82,9 @@ namespace EcomApi.Services
                         }
                         else
                         {
+                            Category parentExist = _dbContext.Category.Where(x => x.CategoryId == category.ParentId).FirstOrDefault();
+                            parentExist.HasChild = true;
+                            _dbContext.Category.Update(parentExist);
                             _dbContext.Category.Add(category);
                             await _dbContext.SaveChangesAsync();
 
