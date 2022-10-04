@@ -33,11 +33,7 @@ namespace EcomApi.Services
                 List<Category> category = await _dbContext.Category
                     .OrderBy(o => o.ParentId)
                     .ToListAsync();
-                responseMessage.ResponseObject = new
-                {
-                    rows = totalCategory,
-                    result = category,
-                };
+                responseMessage.ResponseObject = category;
                 responseMessage.ResponseCode = (int)AppEnums.ResponseCode.Success;
             }
             catch (Exception)
@@ -64,14 +60,7 @@ namespace EcomApi.Services
                 {
                     if(category.Name != null && category.Name != "")
                     {
-                        if (await IsExistCategory(category))
-                        {
-                            responseMessage.ResponseObject = category;
-                            responseMessage.Message = "Already exist this category";
-                            responseMessage.ResponseCode = (int)AppEnums.ResponseCode.Warning;
-                            return responseMessage;
-                        }
-                        else if (category.CategoryId > 0)
+                        if (category.CategoryId > 0)
                         {
                             _dbContext.Category.Update(category);
                             await _dbContext.SaveChangesAsync();
@@ -82,9 +71,25 @@ namespace EcomApi.Services
                         }
                         else
                         {
+                            if (await IsExistCategory(category))
+                            {
+                                responseMessage.ResponseObject = category;
+                                responseMessage.Message = "Already exist this category";
+                                responseMessage.ResponseCode = (int)AppEnums.ResponseCode.Warning;
+                                return responseMessage;
+                            }
+
                             Category parentExist = _dbContext.Category.Where(x => x.CategoryId == category.ParentId).FirstOrDefault();
-                            parentExist.HasChild = true;
-                            _dbContext.Category.Update(parentExist);
+                            if(parentExist != null)
+                            {
+                                parentExist.HasChild = true;
+                                _dbContext.Category.Update(parentExist);
+                                if (!parentExist.Status)
+                                {
+                                    category.Status = false;
+                                }
+                            }
+                            
                             _dbContext.Category.Add(category);
                             await _dbContext.SaveChangesAsync();
 
@@ -109,15 +114,24 @@ namespace EcomApi.Services
             }
             return responseMessage;
         }
-        public async Task<ResponseMessage> DeleteCategory(int id)
+        public async Task<ResponseMessage> DeleteCategory(Category category)
         {
             ResponseMessage responseMessage = new();
             
-            Category category = await _dbContext.Category.FindAsync(id);
+            var existCategory = _dbContext.Category.Where(x => x.CategoryId == category.CategoryId).FirstOrDefault();
 
-            if (category != null)
+            if (existCategory != null)
             {
-                _dbContext.Category.Remove(category);
+                if(category.HasChild)
+                {
+                    List<Category> childCategory = _dbContext.Category.Where(x => x.ParentId == existCategory.CategoryId).ToList();
+
+                    foreach(var child in childCategory)
+                    {
+                        _dbContext.Category.Remove(child);
+                    }
+                }
+                _dbContext.Category.Remove(existCategory);
                 await _dbContext.SaveChangesAsync();
 
                 responseMessage.Message = "Category deleted successfully";
@@ -143,6 +157,6 @@ namespace EcomApi.Services
     {
         Task<ResponseMessage> GetAllCategory();
         Task<ResponseMessage> SaveCategory(CategoryVM categoryVM);
-        Task<ResponseMessage> DeleteCategory(int id);
+        Task<ResponseMessage> DeleteCategory(Category category);
     }
 }
