@@ -34,10 +34,10 @@ namespace EcomApi.Controllers
             return await _categoryService.SaveCategory(categoryVM);
         }
         // DELETE: api/Category/delete/{id}
-        [HttpDelete("delete/{id}")]
-        public async Task<ResponseMessage> DeleteCategory(int id)
+        [HttpPost("delete")]
+        public async Task<ResponseMessage> DeleteCategory(Category category)
         {
-            return await _categoryService.DeleteCategory(id);
+            return await _categoryService.DeleteCategory(category);
         }
     }
 }
